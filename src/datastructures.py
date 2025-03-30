@@ -2,9 +2,11 @@ class FamilyStructure:
     def __init__(self, last_name):
         self.last_name = last_name
         self.members = []
-        self.next_id = 1  # Iniciar el ID desde 1
+        self.next_id = 1   
 
     def add_member(self, member):
+        if "id" not in member:
+            member["id"] = self.get_next_id()   
         self.members.append(member)
 
     def get_member(self, member_id):

@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from datastructures import FamilyStructure
@@ -10,30 +10,24 @@ CORS(app)
 
 jackson_family = FamilyStructure("Jackson")
 
-jhon = {
+jackson_family.add_member({
     "id": 1,
     "first_name": "Jhon",
     "age": 33,
     "lucky_numbers": [7, 13, 22]
-}
-
-jane = {
+})
+jackson_family.add_member({
     "id": 2,
     "first_name": "Jane",
     "age": 35,
     "lucky_numbers": [10, 14, 3]
-}
-
-jimmy = {
+})
+jackson_family.add_member({
     "id": 3,
     "first_name": "Jimmy",
     "age": 5,
     "lucky_numbers": [1]
-}
-
-jackson_family.add_member(jhon)
-jackson_family.add_member(jane)
-jackson_family.add_member(jimmy)
+})
 
 @app.errorhandler(APIException)
 def handle_invalid_usage(error):
@@ -45,54 +39,38 @@ def sitemap():
 
 @app.route('/members', methods=['GET'])
 def get_members():
-    try:
-        members = jackson_family.get_all_members()
-        return jsonify(members), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify(jackson_family.get_all_members()), 200
 
 @app.route('/member/<int:member_id>', methods=['GET'])
 def get_member(member_id):
     member = jackson_family.get_member(member_id)
     if member:
         return jsonify(member), 200
-    else:
-        return jsonify({"error": "Miembro no encontrado"}), 404
+    return jsonify({"error": "Miembro no encontrado"}), 404
 
-@app.route('/members', methods=['POST'])
+@app.route('/member', methods=['POST'])
 def add_member():
-    try:
-        data = request.get_json()
+    data = request.get_json()
+    if not data or 'first_name' not in data or 'age' not in data or 'lucky_numbers' not in data:
+        return jsonify({"error": "Datos incompletos"}), 400
+    if not isinstance(data['age'], int) or data['age'] <= 0:
+        return jsonify({"error": "La edad debe ser un número mayor que 0"}), 400
 
-        if not data or 'first_name' not in data or 'age' not in data or 'lucky_numbers' not in data:
-            return jsonify({"error": "Datos incompletos"}), 400
-
-        if not isinstance(data['age'], int) or data['age'] <= 0:
-            return jsonify({"error": "La edad debe ser un número mayor que 0"}), 400
-
-        new_member = {
-            'id': jackson_family.get_next_id(),  
-            'first_name': data['first_name'],
-            'last_name': 'Jackson',  
-            'age': data['age'],
-            'lucky_numbers': data['lucky_numbers']
-        }
-
-        jackson_family.add_member(new_member)
-
-        return jsonify(new_member), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    new_member = {
+        'id': data.get('id', jackson_family.get_next_id()),
+        'first_name': data['first_name'],
+        'last_name': 'Jackson',
+        'age': data['age'],
+        'lucky_numbers': data['lucky_numbers']
+    }
+    jackson_family.add_member(new_member)
+    return jsonify(new_member), 200
 
 @app.route('/member/<int:member_id>', methods=['DELETE'])
 def delete_member(member_id):
-    try:
-        if jackson_family.delete_member(member_id):
-            return jsonify({"done": True}), 200
-        else:
-            return jsonify({"error": "Miembro no encontrado"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if jackson_family.delete_member(member_id):
+        return jsonify({"done": True}), 200
+    return jsonify({"error": "Miembro no encontrado"}), 404
 
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
